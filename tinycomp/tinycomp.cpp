@@ -18,6 +18,8 @@ const char* opTable[] = {
 	"=",
 	"+",
 	"*",
+	"[]",
+	"[]",
 	"goto",
 	"ifgoto",
 	"stat"
@@ -155,6 +157,139 @@ const char* InstrAddress::toString() const {
 /* COMPILER DATA STRUCTURES */
 /****************************/
 
+/* Memory
+ */
+Memory::Memory() {
+	storage = (unsigned char*)malloc(MEMSIZE * sizeof(unsigned char*) );
+	offset = 0;
+}
+
+Memory& Memory::getInstance() {
+		// The only instance
+		// Guaranteed to be lazy initialized
+		// Guaranteed that it will be destroyed correctly
+		static Memory instance;
+		return instance;
+}
+
+int Memory::store(void* val, int width) {
+		/* offset tells us where free memory begins
+		 */
+		unsigned char* begin = storage + offset;
+
+		memcpy(begin, val, width);
+
+		int oldoffset = offset;
+		offset += width;
+
+		return oldoffset;
+}
+
+void* Memory::retrieve(int offset) {
+	return (void*)((unsigned char*)storage + offset);
+}
+
+TempAddress* Memory::getNewTemp(int width) {
+	int oldoffset = offset;
+	offset += width;
+
+	TempAddress* temp = new TempAddress(oldoffset);
+
+	/* keep track of temp for future printout */
+	temporaries.push_back(temp);
+	tempwidths.push_back(width);
+
+	return temp;
+}
+
+void Memory::hexdump() {
+	unsigned char *pc = storage;
+
+	unsigned char buff[17];
+
+	// Process every byte in the data.
+	for (int i = 0; i < MEMSIZE; i++) {
+			// Multiple of 16 means new line (with line offset).
+
+			if ((i % 16) == 0) {
+					// Just don't print ASCII for the zeroth line.
+					if (i != 0)
+							printf ("  %s\n", buff);
+
+					// Output the offset.
+					printf ("  %04x ", i);
+			}
+
+			// Now the hex code for the specific character.
+			printf (" %02x", pc[i]);
+
+			// And store a printable ASCII character for later.
+			if ((pc[i] < 0x20) || (pc[i] > 0x7e))
+					buff[i % 16] = '.';
+			else
+					buff[i % 16] = pc[i];
+			buff[(i % 16) + 1] = '\0';
+	}
+
+}
+
+/** Prints out a logical view of the memory.
+ * Very dirty implementation. It's only included for debugging purposes.
+ */
+void Memory::printOut(SymTbl* tbl) {
+		Address* storedAddresses[Memory::MEMSIZE];
+
+		for (int i = 0; i < Memory::MEMSIZE; i++) {
+			storedAddresses[i] = NULL;
+		}
+
+		// re-map all addresses
+		for (char c = 'a'; c <= 'z'; c++) {
+			VarAddress* v = ((SimpleArraySymTbl*)tbl)->get(c);
+			if (v != NULL) {
+				int offset = v->getOffset();
+
+				 for (int i = 0; i < v->getWidth(); i++) {
+				 	storedAddresses[offset+i] = v;
+				 }
+			}
+		}
+
+		list<int>::iterator it2 = tempwidths.begin();
+
+		for (list<TempAddress*>::iterator it1 = temporaries.begin(); it1 != temporaries.end(); ++it1) {
+		 	int offset = (*it1)->getOffset();
+
+			int width = (*it2);
+
+			for (int i = 0; i < width; i++) {
+	 			storedAddresses[offset+i] = (*it1);
+			}
+
+			++it2;
+		}
+
+
+		for (int i = 0; i < Memory::MEMSIZE; i++) {
+				// Multiple of 16 means new line (with line offset).
+				if ((i % 16) == 0) {
+						// Just don't print ASCII for the zeroth line.
+						if (i != 0)
+								printf ("\n");
+
+						// Output the offset.
+						printf ("  %04x ", i);
+				}
+
+				if (storedAddresses[i] != NULL) {
+					cout << std::setw(3) << storedAddresses[i];
+				} else {
+					cout << " --";
+				}
+		}
+}
+
+
 /* TargetCode
  */
 
@@ -212,6 +347,16 @@ void TargetCode::printOut() {
 // 	virtual void* get(const char* lexeme) = 0;
 // 	virtual void put(const char* lexeme) = 0;
 // };
+
+/** Constructor for the SimpleArraySymTbl class
+ *  Basically, it just initializes all entries in the table to NULL
+ */
+SimpleArraySymTbl::SimpleArraySymTbl() {
+	for (size_t i = 0; i < 26; i++) {
+		// make sure that the table is clean at the beginning
+		sym[i] = NULL;
+	}
+}
 
 /** Returns an entry from the Symbol table, using a lexeme (a string) as the key.
  *  In this simple implementation, it just falls back to the 1-char lexeme assumption
@@ -418,15 +563,6 @@ std::ostream& operator<<(std::ostream &out, const InstrAddress *addr) {
 }
 
 std::ostream& operator<<(std::ostream &out, const TacInstr *instr) {
-	// if (instr->operand1 != NULL && instr->operand2 != NULL) {
-	//  	return out << setw(4) << instr->valueNumber << ": " << setw(7) << opTable[instr->op] << " " << setw(7) << instr->operand1 << " " << setw(7) << instr->operand2;
-	//  } else if (instr->operand1 != NULL && instr->operand2 == NULL) {
-	//    	return out << setw(4) << instr->valueNumber << ": " << setw(7) << opTable[instr->op] << " " << setw(7) << instr->operand1 << " " << setw(7) << "_";
-	//  } else if (instr->operand1 == NULL && instr->operand2 != NULL) {
-	//  	return out << setw(4) << instr->valueNumber << ": " << setw(7) << opTable[instr->op] << setw(7) << "_" << " " << setw(7) << instr->operand2;
-	//  } else {
-	//  	return out << setw(4) << instr->valueNumber << ": " << setw(7) << opTable[instr->op] << "       _       _";
-	//  }
 	switch(instr->getOp()) {
 		case copyOpr:
 			assert(instr->operand1 != NULL);
@@ -443,6 +579,14 @@ std::ostream& operator<<(std::ostream &out, const TacInstr *instr) {
 		case addOpr:
 			assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->temp != NULL);
 			return out << setw(4) << instr->valueNumber << ": " << instr->temp << " = " << instr->operand1 << " " << opTable[instr->op] << " " << instr->operand2;
+		case indexCopyOpr:
+			assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->temp != NULL);
+			return out << setw(4) << instr->valueNumber << ": " << instr->temp << "[" << instr->operand1 << "] = " << instr->operand2;
+			break;
+		case offsetOpr:
+			assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->temp != NULL);
+			return out << setw(4) << instr->valueNumber << ": " << instr->temp << " = " << instr->operand1 << "[" << instr->operand2 << "]";
+			break;
 		case haltOpr:
 			return out << setw(4) << instr->valueNumber << ": " << opTable[instr->op];
 		case mulOpr: /* TBD */
