@@ -1,9 +1,0 @@
-int a, b, c;
-// This is the declaration of a complex variable: it won't compile
-// until you modify the code
-complex d;
-float f;
-
-stat;
-stat;
-stat;
