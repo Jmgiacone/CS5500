@@ -9,7 +9,7 @@ j := 4;
 // this should *not* raise an error; an int may be promoted to a fraction
 f := 2;
 
-g := j|2;
+g := 4|2;
 
 // whenever the code we produce will be run, f will evaluate to 2 (or 2|1) and
 // g to 4|2

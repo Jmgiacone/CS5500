@@ -35,6 +35,8 @@ floatconst      {intconst}\.[0-9]*
 "=="            return EQ;
 "!="            return NE;
 
+":="            return ASSIGN;
+
 "||"            return OR;
 "&&"            return AND;
 

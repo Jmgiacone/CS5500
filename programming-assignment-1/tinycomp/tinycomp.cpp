@@ -18,10 +18,11 @@ const char* opTable[] = {
 	"=",
 	"+",
 	"*",
+	"/",
 	"[]",
 	"[]",
 	"goto",
-	"ifgoto",
+	"if==goto",
 	"stat"
 };
 
@@ -306,8 +307,8 @@ TacInstr* TargetCode::gen(oprEnum op, Address* operand1, Address* operand2) {
 	return gen(new TacInstr(op, operand1, operand2, NULL));
 }
 
-TacInstr* TargetCode::gen(oprEnum op, Address* operand1, Address* operand2, TempAddress* temp) {
-	return gen(new TacInstr(op, operand1, operand2, temp));
+TacInstr* TargetCode::gen(oprEnum op, Address* operand1, Address* operand2, Address* operand3) {
+	return gen(new TacInstr(op, operand1, operand2, operand3));
 }
 
 TargetCode::TargetCode() {
@@ -439,13 +440,23 @@ void TacInstr::setValueNumber(int vn) {
 	valueNumber = new InstrAddress(vn);
 }
 
-TacInstr::TacInstr(oprEnum op, Address* operand1, Address* operand2, TempAddress* temp) {
+TacInstr::TacInstr(oprEnum op, Address* operand1, Address* operand2, Address* operand3) {
 	this->valueNumber = NULL;
 	this->op = op;
 	this->operand1 = operand1;
 	this->operand2 = operand2;
 
-	this->temp = temp;
+	switch (op) {
+		case jmpOpr:
+		case eqcondJmpOpr:
+			this->temp = NULL;
+			this->destInstr = (InstrAddress*)operand3;
+			break;
+		default:
+			this->temp = (TempAddress*)operand3;
+			this->destInstr = NULL;
+			break;
+	}
 }
 
 InstrAddress* TacInstr::getValueNumber() {
@@ -454,9 +465,9 @@ InstrAddress* TacInstr::getValueNumber() {
 
 // for backpathcing "goto"-like instructions
 void TacInstr::patch(TacInstr* i) {
-	assert(this->getOp() == jmpOpr || this->getOp() == condJmpOpr);
+	assert(this->getOp() == jmpOpr || this->getOp() == eqcondJmpOpr);
 
-	this->operand1 = i->getValueNumber();
+	this->destInstr = i->getValueNumber();
 }
 
 
@@ -506,14 +517,14 @@ typeName ExprAttr::getType() {
 */
 void BoolAttr::addTrue(TacInstr* instr) {
 	// check: must be a goto
-	assert(instr->getOp() == jmpOpr || instr->getOp() == condJmpOpr);
+	assert(instr->getOp() == jmpOpr || instr->getOp() == eqcondJmpOpr);
 
 	truelist.push_back(instr);
 }
 
 void BoolAttr::addFalse(TacInstr* instr) {
 	// check: must be a goto
-	assert(instr->getOp() == jmpOpr || instr->getOp() == condJmpOpr);
+	assert(instr->getOp() == jmpOpr || instr->getOp() == eqcondJmpOpr);
 
 	falselist.push_back(instr);
 }
@@ -574,23 +585,29 @@ std::ostream& operator<<(std::ostream &out, const TacInstr *instr) {
 		case fakeOpr:
 			return out << setw(4) << instr->valueNumber << ": " << opTable[instr->op];
 		case jmpOpr:
-			assert(instr->operand1 != NULL);
-			return out << setw(4) << instr->valueNumber << ": " << opTable[instr->op] << " " << instr->operand1;
+			assert(instr->destInstr != NULL);
+			return out << setw(4) << instr->valueNumber << ": " << opTable[instr->op] << " " << instr->destInstr;
 		case addOpr:
 			assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->temp != NULL);
 			return out << setw(4) << instr->valueNumber << ": " << instr->temp << " = " << instr->operand1 << " " << opTable[instr->op] << " " << instr->operand2;
-		case indexCopyOpr:
+		case divOpr:
+			assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->temp != NULL);
+			return out << setw(4) << instr->valueNumber << ": " << instr->temp << " = " << instr->operand1 << " " << opTable[instr->op] << " " << instr->operand2;
+		case indexCopyOpr: /* the indexed copy operator temp[op1] = op2 */
 			assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->temp != NULL);
 			return out << setw(4) << instr->valueNumber << ": " << instr->temp << "[" << instr->operand1 << "] = " << instr->operand2;
 			break;
-		case offsetOpr:
+		case offsetOpr: /* the displacement operator temp = op1[op2] */
 			assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->temp != NULL);
 			return out << setw(4) << instr->valueNumber << ": " << instr->temp << " = " << instr->operand1 << "[" << instr->operand2 << "]";
+			break;
+		case eqcondJmpOpr: /*the "if op1 == op2 goto instr" operator */
+			assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->destInstr != NULL);
+			return out << setw(4) << instr->valueNumber << ": " << "if " << instr->operand1 << " == " << instr->operand2 << " goto " << instr->destInstr;
 			break;
 		case haltOpr:
 			return out << setw(4) << instr->valueNumber << ": " << opTable[instr->op];
 		case mulOpr: /* TBD */
-		case condJmpOpr: /* TBD */
 		case UNKNOWNOpr: /* TBD */
 		default:
 			return out << setw(4) << instr->valueNumber << ": " << "???";

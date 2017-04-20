@@ -63,7 +63,7 @@ TargetCode *code = new TargetCode();
 %left GE LE EQ NE '>' '<'
 %left '+' '-'
 %left '*' '/'
-%nonassoc UMINUS
+%nonassoc UMINUS ASSIGN
 
 %type <attrs>expr
 %type <attrs>stmt
@@ -114,7 +114,7 @@ stmt:
 
 				$$ = new StmtAttr();
 			}
-	| ID '=' expr	{
+	| ID ASSIGN expr	{
 				VarAddress* var = sym->get($1);
 				code->gen(copyOpr, var, ((ExprAttr*)$3)->getAddr());
 
@@ -125,12 +125,35 @@ stmt:
 	  cond ')'
 	  {$<inhAttr>$ = code->getNextInstr();}
 	  '{' stmt_list '}' {
+			/* This is the "while" production: stmt -> WHILE cond '{' stmt_list '}'
+			 * Since we're gonna need some backpatches, I'm using inherited attributes.
+			 * You should remember them from theory; however their main use here is to
+			 * keep track of "interesting addresses" (instructions that we'll use for backpatching).
+			 * With embedded inherithed attributes, the production becomes:
+			 * stmt -> WHILE <inh_attr1> cond '{' <inh_attr2> stmt_list '}'
+			 * The type of an inherited attribute in bison needs to be defined in the
+			 * %union structure (it's "inhAttr" in our case), and needs to be specified in the
+			 * production (it's the weird "$<inhAttr>$" field, which is initialized to "nextinstr")
+			*/
+
+				/* this backpatches $4.truelist (i.e. cond.truelist) to $6.nextinstr
+				 * $6 is the second inherited attribute, so its nextinstr is the beginning
+				 * of stmt_list
+				 */
 				code->backpatch(((BoolAttr *)$4)->getTruelist(), code->getInstr($<inhAttr>6));
 
-				TacInstr* i = code->gen(jmpOpr, code->getInstr($<inhAttr>3)->getValueNumber(), NULL);
+				/* this generates a goto $3.nexinstr (i.e. "goto cond") */
+				TacInstr* i = code->gen(jmpOpr, NULL, NULL, code->getInstr($<inhAttr>3)->getValueNumber());
 
+				/* this backpatches stmt_list.nextlist to the beginning of instruction i
+				 * i.e. to the goto we've just generated.
+				 */
 				code->backpatch(((StmtAttr *)$8)->getNextlist(), i);
 
+				/* Finally, we're creating the attributes for the while statement.
+				 * As any other statement, it needs a nextlist; in this case,
+				 * the nextlist is the falselist of the cond
+				 */
 				StmtAttr *attrs = new StmtAttr();
 				attrs->addNext(((BoolAttr *)$4)->getFalselist());
 
@@ -198,6 +221,19 @@ cond:
 
 				$$ = attrs;
 			}
+			| expr EQ expr { /*the "if op1 == op2 goto instr" operator */
+	 		 		BoolAttr* attrs = new BoolAttr();
+	 				if ( ((ExprAttr*)$1)->getType() == intType && ((ExprAttr*)$3)->getType() == intType ) {
+	 						TacInstr* i1 = code->gen(eqcondJmpOpr, ((ExprAttr*)$1)->getAddr(), ((ExprAttr*)$3)->getAddr(), NULL);
+	 						TacInstr* i2 = code->gen(jmpOpr, NULL, NULL, NULL);
+	 						attrs->addTrue(i1);
+	 						attrs->addFalse(i2);
+	 				} else {
+	 					assert(false);
+	 				}
+
+	 				$$ = attrs;
+	 	 }
 	;
 
 %%

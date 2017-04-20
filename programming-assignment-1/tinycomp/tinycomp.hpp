@@ -164,6 +164,8 @@ private:
 
 	TempAddress* temp;
 
+	InstrAddress* destInstr;
+
 	void setValueNumber(int vn);
 	friend class TargetCode;
 
@@ -174,9 +176,10 @@ public:
 	 * @param op The operator for this instruction, as an oprEnum
 	 * @param operand1 The first operand, as a generic Address
 	 * @param operand2 The second operand (may be NULL for operators that do not require 2 operands)
-	 * @param temp Holds a temporary, when explicitly needed to specify the address result, depending on the operation
+	 * @param operand3 The (option) operand3 may hold a temporary, when explicitly needed to specify the address result, depending on the operation;
+	 *	or an InstrAddress, specifying the destination of a jump instruction.
 	 */
-	TacInstr(oprEnum op, Address* operand1, Address* operand2, TempAddress* temp);
+	TacInstr(oprEnum op, Address* operand1, Address* operand2, Address* operand3);
 
 	/** Returns the enum representing the operator of this specific instruction */
 	oprEnum getOp() const;
@@ -292,9 +295,10 @@ public:
 	/** Implementation of "gen()" from the textbook.
 	 *  Basically, if generates a new TacInstr with the given parameters,
 	 *  and stores it in the next available place in the code array
-	 *  This version accounts for using temporaries.
+	 *  This version accounts for a third operand, storing temporaries or instruction addresses,
+	 *  depending on what is needed by the operator op.
 	 */
-	TacInstr* gen(oprEnum op, Address* operand1, Address* operand2, TempAddress* temp);
+	TacInstr* gen(oprEnum op, Address* operand1, Address* operand2, Address* operand3);
 
 	/** Implementation of "backpatch()" from the textbook.
 	 *  @param gotolist a list of TacInstr; each one is assumed to be a "goto"-like instruction
