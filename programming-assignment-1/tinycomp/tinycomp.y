@@ -1,4 +1,10 @@
 %{
+
+//Jordan Giacone
+//Programming Assignment 1
+//CS5500 - Structure of a Compiler
+//4-26-17
+
 #include <iostream>
 #include <iomanip>
 using namespace std;

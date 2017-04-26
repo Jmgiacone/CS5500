@@ -1,3 +1,7 @@
+//Jordan Giacone
+//Programming Assignment 1
+//CS5500 - Structure of a Compiler
+//4-26-17
 #ifndef TINYCOMP_HPP_
 #define TINYCOMP_HPP_
 
