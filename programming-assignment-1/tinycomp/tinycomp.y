@@ -168,7 +168,6 @@ stmt:
                                       {
                                         case intType:
                                           cout << "Promoting int to fraction" << endl;
-                                          //TODO: Promote the int to a fraction
                                           //t = new Temp()
                                           //t[0] = expr.addr
                                           //t[4] = 1
@@ -196,7 +195,6 @@ stmt:
                                   else if(expr->getType() == intType)
                                   {
                                     cout << "Promoting int to fraction" << endl;
-                                    //TODO: Promote the int to a fraction
                                     //t = new Temp()
                                     //t[0] = expr.addr
                                     //t[4] = 1
@@ -299,7 +297,7 @@ INTEGER
         //t[4] = f.denom
 	fraction f = $1;
 
-	//TODO: Use the 'gen' function here? Grab a temp address of 2*int and do it that way?
+
         TempAddress* t = mem.getNewTemp(2 * sizeof(int));
         code->gen(indexCopyOpr, new ConstAddress(0), new ConstAddress(f.numerator), t);
         code->gen(indexCopyOpr, new ConstAddress((int)sizeof(int)), new ConstAddress(f.denominator), t);
@@ -333,7 +331,6 @@ INTEGER
 | expr '*' expr
   {
     //cout << "expr * expr" << endl;
-    //TODO: Promote ints to do the multiplication? Just multiply the numerator?
     if ( ((ExprAttr*)$1)->getType() == fractionType && ((ExprAttr*)$3)->getType() == fractionType)
     {
       TempAddress* temp = mem.getNewTemp(2 * sizeof(int));
@@ -353,7 +350,6 @@ INTEGER
       //t6[0] = t4
       //t6[4] = t5
 
-      //TODO: Make sure this is good
       code->gen(offsetOpr, ((ExprAttr*)$1)->getAddr(), new ConstAddress(0), tempNum1);
       code->gen(offsetOpr, ((ExprAttr*)$3)->getAddr(), new ConstAddress(0), tempNum2);
       code->gen(offsetOpr, ((ExprAttr*)$1)->getAddr(), new ConstAddress((int)sizeof(int)), tempDenom1);
@@ -481,7 +477,7 @@ cond:
 	   TacInstr* compareDenominators = code->gen(eqcondJmpOpr, fract1Denom, fract2Denom, NULL);
 	   TacInstr* failedComparison2 = code->gen(jmpOpr, NULL, NULL, NULL);
 
-	   //TODO: Backpatch the numerator instruction to jump to the next one when true
+	   //Backpatch the numerator instruction to jump to the next one when true
 	   list<TacInstr*> l;
 	   l.push_front(compareNumerators);
 

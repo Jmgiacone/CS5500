@@ -72,7 +72,6 @@ fractionconst   {intconst}\|{intconst}
                 return FLOAT;
             }
 {fractionconst} {
-                  //TODO: Fix this
                   //Declare num and denom
                   int counter = 0;
                   char numString[25];

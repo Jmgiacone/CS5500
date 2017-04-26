@@ -411,7 +411,6 @@ void SimpleArraySymTbl::put(char lexeme, typeName type)
 		break;
 	       case fractionType:
 	       {
-	         //TODO: Pointer to numerator, or pointer to the actual fraction?
 	         fraction fractionVal;
 	         fractionVal.numerator = 0;
 	         fractionVal.denominator = 0;
