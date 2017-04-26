@@ -117,7 +117,7 @@ stmt:
 				$$ = new StmtAttr();
 			}
 	| ID ASSIGN expr	{
-        cout << "ID ASSIGN expr" << endl;
+        //cout << "ID ASSIGN expr" << endl;
 				VarAddress* var = sym->get($1);
 
                                 if(var == NULL)
@@ -260,7 +260,7 @@ stmt:
 			}
         | IF '(' cond ')' THEN {$<inhAttr>$ = code->getNextInstr();} '{' stmt_list '}'
           {
-            cout << "if statement" << endl;
+            //cout << "if statement" << endl;
             //Create the attribute for this statement
             StmtAttr* attrs = new StmtAttr();
 
@@ -280,7 +280,7 @@ stmt:
 expr:
 INTEGER 
 {
-	cout << "int expression" << endl;
+	//cout << "int expression" << endl;
 	ConstAddress *ia = new ConstAddress($1);
 
 	$$ = new ExprAttr(ia);
@@ -293,7 +293,7 @@ INTEGER
 			}
 | FRACTION
   {
-	cout << "Found a fraction" << endl;
+	//cout << "Found a fraction" << endl;
         //t = new Temp()
         //t[0] = f.num
         //t[4] = f.denom
@@ -332,7 +332,7 @@ INTEGER
   }
 | expr '*' expr
   {
-    cout << "expr * expr" << endl;
+    //cout << "expr * expr" << endl;
     //TODO: Promote ints to do the multiplication? Just multiply the numerator?
     if ( ((ExprAttr*)$1)->getType() == fractionType && ((ExprAttr*)$3)->getType() == fractionType)
     {
@@ -412,7 +412,7 @@ cond:
     }
     else if (((ExprAttr*)$1)->getType() == fractionType && ((ExprAttr*)$3)->getType() == fractionType)
     {
-      cout << "Comparing fractions for the same rational number" << endl;
+      //cout << "Comparing fractions for the same rational number" << endl;
 
       //t0 = e1[0]
       //t1 = e1[4]
@@ -457,7 +457,7 @@ cond:
 
 	 if(((ExprAttr*)$1)->getType() == fractionType && ((ExprAttr*)$3)->getType() == fractionType)
 	 {
-	   cout << "Comparing fractions for the exact same fraction" << endl;
+	   //cout << "Comparing fractions for the exact same fraction" << endl;
 
            //t0 = e1[0]
 	   //t1 = e1[4]
