@@ -126,7 +126,7 @@ fractionconst   {intconst}\|{intconst}
 [ \t\n]+        ;       /* ignore whitespace */
 
 .               {
-                    printf("Unknown character %x\n", yytext);
+                    printf("Unknown character %s\n", yytext);
                     const char* err = "Unknown character";
                     //yyerror(err);
                 }
