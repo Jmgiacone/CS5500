@@ -415,7 +415,7 @@ void SimpleArraySymTbl::put(char lexeme, typeName type)
 	         fraction fractionVal;
 	         fractionVal.numerator = 0;
 	         fractionVal.denominator = 0;
-	         offset = mem.store(&fractionVal.numerator, 2 * sizeof(int));
+	         offset = mem.store(&fractionVal, 2 * sizeof(int));
 	       }
 	       default:
 		break;
