@@ -11,6 +11,7 @@
 using namespace std;
 
 #include "tinycomp.hpp"
+#include "tinycomp.h"
 
 const char* opTable[] = {
 	"UNKNOWN",
@@ -78,6 +79,8 @@ VarAddress::VarAddress(char v, typeName t, int o) {
 		case floatType:
 			width = sizeof(float);
 			break;
+    case fractionType:
+      width = 2 * sizeof(float);
 		default:
 			/* should never reach here */
 			break;
@@ -385,25 +388,37 @@ void SimpleArraySymTbl::put(const char* lexeme, typeName type) {
 
 /** Stores an entry in the Symbol table, assuming that all lexemes are just 1-char long
  */
-void SimpleArraySymTbl::put(char lexeme, typeName type) {
+void SimpleArraySymTbl::put(char lexeme, typeName type) 
+{
 	int index = lexeme -'a';
 
 	int offset;
 
 	// we store variables in memory, initializing them with a default value depending on their type
-	switch(type) {
-		case intType: {
+	switch(type) 
+        {
+		case intType: 
+                {
 			int intVal = 0;
 			offset = mem.store(&intVal, sizeof(int));
-			}
-			break;
-		case floatType: {
+		}
+		break;
+		case floatType: 
+                {
 			float floatVal = 0;
 			offset = mem.store(&floatVal, sizeof(float));
-			}
-			break;
-		default:
-			break;
+		}
+		break;
+	       case fractionType:
+	       {
+	         //TODO: Pointer to numerator, or pointer to the actual fraction?
+	         fraction fractionVal;
+	         fractionVal.numerator = 0;
+	         fractionVal.denominator = 0;
+	         offset = mem.store(&fractionVal.numerator, 2 * sizeof(int));
+	       }
+	       default:
+		break;
 	}
 
 	VarAddress* a = new VarAddress(lexeme, type, offset);
@@ -421,6 +436,9 @@ void SimpleArraySymTbl::printOut() {
 				case floatType:
 					cout << i << ") : " << sym[i] << " (float) - offset = " << sym[i]->getOffset() << endl;
 					break;
+        case fractionType:
+          cout << i << ") : " << sym[i] << " (fract) - offset = " << sym[i]->getOffset() << endl;
+          break;
 				default:
 					/* should not occur */
 					cout << i << ") : " << sym[i] << endl;
@@ -607,7 +625,9 @@ std::ostream& operator<<(std::ostream &out, const TacInstr *instr) {
 			break;
 		case haltOpr:
 			return out << setw(4) << instr->valueNumber << ": " << opTable[instr->op];
-		case mulOpr: /* TBD */
+		case mulOpr: 
+                        assert(instr->operand1 != NULL && instr->operand2 != NULL && instr->temp != NULL);
+			return out << setw(4) << instr->valueNumber << ": " << instr->temp << " = " << instr->operand1 << " " << opTable[instr->op] << " " << instr->operand2; 
 		case UNKNOWNOpr: /* TBD */
 		default:
 			return out << setw(4) << instr->valueNumber << ": " << "???";

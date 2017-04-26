@@ -16,8 +16,15 @@
  */
 typedef enum {
 	intType, 	/*!< integer type */
-	floatType	/*!< floating point type */
+	floatType,	/*!< floating point type */
+        fractionType //Fraction type
 } typeName;
+
+typedef struct
+{
+    int numerator;
+    int denominator;
+} fraction;
 
 /** Enums for 3-addr code - operators */
 typedef enum {

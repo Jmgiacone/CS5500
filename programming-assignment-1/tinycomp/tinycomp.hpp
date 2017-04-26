@@ -47,6 +47,7 @@ private:
 	union {
 		int i;
 		float f;
+    fraction fract;
 	} val;
 
 public:

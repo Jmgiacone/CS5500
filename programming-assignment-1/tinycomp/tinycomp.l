@@ -11,6 +11,7 @@ void yyerror(const char *);
 /* regular definitions */
 intconst        0|[1-9][0-9]*
 floatconst      {intconst}\.[0-9]*
+fractionconst   {intconst}\|{intconst}
 
 %%
 
@@ -26,6 +27,11 @@ floatconst      {intconst}\.[0-9]*
 
             }
 
+"fraction"  {
+                yylval.typeLexeme = fractionType;
+                return TYPE;
+            }
+
 "stat"      {
                 return STAT;
             }
@@ -33,6 +39,7 @@ floatconst      {intconst}\.[0-9]*
 ">="            return GE;
 "<="            return LE;
 "=="            return EQ;
+"="             return EXACT_EQ;
 "!="            return NE;
 
 ":="            return ASSIGN;
@@ -43,6 +50,7 @@ floatconst      {intconst}\.[0-9]*
 
 "while"         return WHILE;
 "if"            return IF;
+"then"          return THEN;
 "else"          return ELSE;
 "print"         return PRINT;
 
@@ -63,6 +71,51 @@ floatconst      {intconst}\.[0-9]*
                 yylval.fValue = atof(yytext);
                 return FLOAT;
             }
+{fractionconst} {
+                  //TODO: Fix this
+                  //Declare num and denom
+                  int counter = 0;
+                  char numString[25];
+                  char denomString[25];
+                  bool pipeFound = false;
+
+                  //Search for the pipe               
+                  for(int i = 0; i < strlen(yytext); i++)
+                  {
+                    //printf("%c", yytext[i]);
+                    if(yytext[i] == '|')
+                    {
+                      //printf("Found pipe!");
+                      pipeFound = true;
+                      numString[counter] = '\0';     
+                      counter = 0;                 
+                    }
+                    else if(!pipeFound)
+                    {
+                      numString[counter] = yytext[i];
+                      counter++;
+                    }
+                    else
+                    {
+                      denomString[counter] = yytext[i];
+                      counter++;
+                    }                    
+                  }
+                  denomString[counter] = '\0';
+                  //printf("\n");
+                  //printf("Num String: %s\n", numString);
+                  //printf("Denom String: %s\n", denomString);
+
+                  fraction f;
+                  f.numerator = atoi(numString);
+                  f.denominator = atoi(denomString);
+
+                  //printf("Num: %d\n", f.numerator);
+                  //printf("Denom: %d\n", f.denominator);
+
+                  yylval.fractValue = f;
+                  return FRACTION;
+                }
 
 [-()<>=+*/,;{}.] {
                 return *yytext;
@@ -73,8 +126,10 @@ floatconst      {intconst}\.[0-9]*
 [ \t\n]+        ;       /* ignore whitespace */
 
 .               {
+                    printf("Unknown character %x\n", yytext);
                     const char* err = "Unknown character";
-                    yyerror(err);
+                    //yyerror(err);
                 }
+
 
 %%
